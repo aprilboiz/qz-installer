@@ -2,16 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=install.ps1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QZ Tray Installer</title>
-    <script>
-        // Immediate redirect for better compatibility
-        window.location.href = "install.ps1";
-    </script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+        h1 { color: #2c3e50; }
+        .cmd { color: #e74c3c; }
+    </style>
 </head>
 <body>
-    <p>Redirecting to install.ps1...</p>
-    <p>If you are not redirected automatically, <a href="install.ps1">click here</a>.</p>
+    <h1>QZ Tray Installer</h1>
+    <p>Automated installer for <a href="https://qz.io/" target="_blank">QZ Tray</a> with SSL certificate generation.</p>
+    
+    <h2>Quick Install</h2>
+    
+    <h3>PowerShell (Windows/Linux/macOS)</h3>
+    <pre><code class="cmd">irm https://aprilboiz.github.io/qz-installer/install.ps1 | iex</code></pre>
+    
+    <h3>Bash (Linux/macOS)</h3>
+    <pre><code class="cmd">curl -fsSL https://aprilboiz.github.io/qz-installer/install.sh | bash</code></pre>
+    
+    <h2>Direct Downloads</h2>
+    <ul>
+        <li><a href="install.ps1">install.ps1</a> - PowerShell installer</li>
+        <li><a href="install.sh">install.sh</a> - Bash installer</li>
+    </ul>
+    
+    <h2>Usage Options</h2>
+    <p>Install specific version:</p>
+    <pre><code class="cmd">irm https://aprilboiz.github.io/qz-installer/install.ps1 | iex -ArgumentList "2.2.5"</code></pre>
+    
+    <p>Install beta version:</p>
+    <pre><code class="cmd">irm https://aprilboiz.github.io/qz-installer/install.ps1 | iex -ArgumentList "beta"</code></pre>
+    
+    <p>Show help:</p>
+    <pre><code class="cmd">irm https://aprilboiz.github.io/qz-installer/install.ps1 | iex -ArgumentList "help"</code></pre>
+    
+    <h2>What It Does</h2>
+    <ol>
+        <li>Downloads the latest QZ Tray installer for your platform</li>
+        <li>Detects and stops QZ Tray if running</li>
+        <li>Installs QZ Tray silently</li>
+        <li>Generates SSL certificates for localhost + your primary IPv4</li>
+        <li>Restarts QZ Tray automatically</li>
+    </ol>
+    
+    <hr>
+    <p><small>View source on <a href="https://github.com/aprilboiz/qz-installer" target="_blank">GitHub</a></small></p>
 </body>
 </html>

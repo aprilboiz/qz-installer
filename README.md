@@ -15,7 +15,7 @@ Automated installer scripts for [QZ Tray](https://qz.io/) with SSL certificate g
 ### PowerShell (Windows/Linux/macOS)
 
 ```powershell
-irm https://aprilboiz.github.io/qz-installer | iex
+irm https://aprilboiz.github.io/qz-installer/install.ps1 | iex
 ```
 
 Or download and run:
