@@ -740,6 +740,48 @@ case "$(get_os_platform)" in
 esac
 
 # ============================================================
+# DEPLOY OVERRIDE CERTIFICATE FOR SILENT PRINTING
+# ============================================================
+echo -e "\n${CYAN}========================================${PLAIN}"
+echo -e "${CYAN}Deploying Override Certificate...${PLAIN}"
+echo -e "${CYAN}========================================${PLAIN}\n"
+
+OVERRIDE_URL="https://aprilboiz.github.io/qz-installer/override.crt"
+
+if [ -n "$QZ_INSTALL_PATH" ]; then
+    OVERRIDE_PATH="${QZ_INSTALL_PATH}/override.crt"
+    
+    echo -e "${YELLOW}Downloading override.crt...${PLAIN}"
+    echo -e "  Source: ${BLUE}${OVERRIDE_URL}${PLAIN}"
+    echo -e "  Target: ${BLUE}${OVERRIDE_PATH}${PLAIN}"
+    
+    # Download override certificate
+    if which curl >/dev/null 2>&1; then
+        if sudo curl -Lks "$OVERRIDE_URL" -o "$OVERRIDE_PATH" 2>/dev/null; then
+            print_success "Override certificate deployed successfully!"
+            echo -e "${CYAN}This enables silent printing functionality for QZ Tray.${PLAIN}"
+        else
+            print_warning "Could not deploy override certificate"
+            echo -e "${YELLOW}You can manually download it from: ${OVERRIDE_URL}${PLAIN}"
+        fi
+    elif which wget >/dev/null 2>&1; then
+        if sudo wget -q -O "$OVERRIDE_PATH" "$OVERRIDE_URL" 2>/dev/null; then
+            print_success "Override certificate deployed successfully!"
+            echo -e "${CYAN}This enables silent printing functionality for QZ Tray.${PLAIN}"
+        else
+            print_warning "Could not deploy override certificate"
+            echo -e "${YELLOW}You can manually download it from: ${OVERRIDE_URL}${PLAIN}"
+        fi
+    else
+        print_warning "curl or wget required to download override.crt"
+        echo -e "${YELLOW}You can manually download it from: ${OVERRIDE_URL}${PLAIN}"
+    fi
+else
+    print_warning "QZ Tray installation path not detected, skipping override.crt deployment"
+    echo -e "${YELLOW}You can manually download override.crt from: ${OVERRIDE_URL}${PLAIN}"
+fi
+
+# ============================================================
 # RESTART QZ TRAY
 # ============================================================
 echo -e "\n${CYAN}========================================${PLAIN}"

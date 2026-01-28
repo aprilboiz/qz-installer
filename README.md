@@ -72,12 +72,22 @@ curl -fsSL https://aprilboiz.github.io/qz-installer/install.sh | bash -s -- "hel
 2. **Detects** if QZ Tray is running and stops it gracefully
 3. **Installs** QZ Tray silently
 4. **Generates** SSL certificates for localhost + your primary IPv4 address
-5. **Restarts** QZ Tray automatically
+5. **Deploys** override certificate for silent printing functionality
+6. **Restarts** QZ Tray automatically
 
 ## SSL Certificate
 
 After installation, QZ Tray will be accessible via HTTPS at:
 - `https://localhost:8181`
+- `https://<your-ip>:8181`
+
+The certificate is generated with both localhost and your primary network IP for remote access.
+
+## Override Certificate (Silent Printing)
+
+The installer automatically deploys an `override.crt` certificate to enable silent printing without browser prompts. This certificate is placed in the QZ Tray installation directory and allows trusted signing of print requests.
+
+**Note:** For security, you should replace the default override certificate with your own in production environments.
 - `https://<your-ip>:8181`
 
 The certificate is generated with both localhost and your primary network IP for remote access.

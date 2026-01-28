@@ -748,6 +748,46 @@ if($qzConsoleExe -and (Test-Path $qzConsoleExe)) {
 }
 
 # ============================================================
+# DEPLOY OVERRIDE CERTIFICATE FOR SILENT PRINTING
+# ============================================================
+
+Write-Host "`n========================================" -ForegroundColor Cyan
+Write-Host "Deploying Override Certificate..." -ForegroundColor Cyan
+Write-Host "========================================`n" -ForegroundColor Cyan
+
+$OVERRIDE_URL = "https://aprilboiz.github.io/qz-installer/override.crt"
+
+if($qzInstallPath) {
+    try {
+        $overridePath = Join-Path $qzInstallPath "override.crt"
+        
+        Write-Host "Downloading override.crt..." -ForegroundColor Yellow
+        Write-Host "  Source: " -NoNewline
+        Write-Host "$OVERRIDE_URL" -ForegroundColor Blue
+        Write-Host "  Target: " -NoNewline
+        Write-Host "$overridePath" -ForegroundColor Blue
+        
+        $ProgressPreference = 'SilentlyContinue'
+        Invoke-WebRequest -Uri $OVERRIDE_URL -OutFile $overridePath -UseBasicParsing
+        
+        if(Test-Path $overridePath) {
+            Write-Host "`n[SUCCESS]" -ForegroundColor Green -NoNewline
+            Write-Host " Override certificate deployed successfully!"
+            Write-Host "This enables silent printing functionality for QZ Tray." -ForegroundColor Cyan
+        } else {
+            Write-Warning "Failed to verify override.crt deployment"
+        }
+    }
+    catch {
+        Write-Warning "Could not deploy override certificate: $_"
+        Write-Host "You can manually download it from: $OVERRIDE_URL" -ForegroundColor Yellow
+    }
+} else {
+    Write-Warning "QZ Tray installation path not detected, skipping override.crt deployment"
+    Write-Host "You can manually download override.crt from: $OVERRIDE_URL" -ForegroundColor Yellow
+}
+
+# ============================================================
 # RESTART QZ TRAY
 # ============================================================
 
