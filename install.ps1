@@ -767,16 +767,75 @@ if($qzInstallPath) {
         Write-Host "  Target: " -NoNewline
         Write-Host "$overridePath" -ForegroundColor Blue
         
+        # Download to temp location first
+        $tempOverride = Join-Path $env:TEMP "qz-override.crt"
         $ProgressPreference = 'SilentlyContinue'
-        Invoke-WebRequest -Uri $OVERRIDE_URL -OutFile $overridePath -UseBasicParsing
+        Invoke-WebRequest -Uri $OVERRIDE_URL -OutFile $tempOverride -UseBasicParsing
         
-        if(Test-Path $overridePath) {
-            Write-Host "`n[SUCCESS]" -ForegroundColor Green -NoNewline
-            Write-Host " Override certificate deployed successfully!"
-            Write-Host "This enables silent printing functionality for QZ Tray." -ForegroundColor Cyan
+        $os = Get-OSPlatform
+        
+        if($os -eq "Windows") {
+            # Windows: Use PowerShell to copy with elevation
+            Write-Host "`n  Copying to installation directory (requires elevation)..." -ForegroundColor Gray
+            
+            # Create a PowerShell script to copy the file with admin rights
+            $copyScript = @"
+`$ErrorActionPreference = 'Stop'
+try {
+    Copy-Item -Path '$tempOverride' -Destination '$overridePath' -Force
+    if(Test-Path '$overridePath') {
+        exit 0
+    } else {
+        exit 1
+    }
+} catch {
+    Write-Error `$_
+    exit 1
+}
+"@
+            
+            # Save script to temp file
+            $tempScript = Join-Path $env:TEMP "qz-copy-override.ps1"
+            $copyScript | Out-File -FilePath $tempScript -Encoding UTF8 -Force
+            
+            # Execute with elevation
+            $copyProcess = Start-Process -FilePath "powershell.exe" `
+                                        -ArgumentList "-ExecutionPolicy", "Bypass", "-NoProfile", "-File", "`"$tempScript`"" `
+                                        -Verb RunAs `
+                                        -Wait `
+                                        -PassThru `
+                                        -WindowStyle Hidden
+            
+            # Clean up temp script
+            Remove-Item -Path $tempScript -Force -ErrorAction SilentlyContinue
+            
+            if($copyProcess.ExitCode -eq 0 -and (Test-Path $overridePath)) {
+                Write-Host "`n[SUCCESS]" -ForegroundColor Green -NoNewline
+                Write-Host " Override certificate deployed successfully!"
+                Write-Host "This enables silent printing functionality for QZ Tray." -ForegroundColor Cyan
+            } else {
+                Write-Warning "Failed to copy override.crt to installation directory"
+                Write-Host "You can manually copy it from: $tempOverride to $overridePath" -ForegroundColor Yellow
+            }
         } else {
-            Write-Warning "Failed to verify override.crt deployment"
+            # macOS/Linux: Use sudo to copy
+            if (Get-Command "sudo" -errorAction SilentlyContinue) {
+                sudo cp "$tempOverride" "$overridePath"
+            } else {
+                su root -c "cp '$tempOverride' '$overridePath'"
+            }
+            
+            if(Test-Path $overridePath) {
+                Write-Host "`n[SUCCESS]" -ForegroundColor Green -NoNewline
+                Write-Host " Override certificate deployed successfully!"
+                Write-Host "This enables silent printing functionality for QZ Tray." -ForegroundColor Cyan
+            } else {
+                Write-Warning "Failed to verify override.crt deployment"
+            }
         }
+        
+        # Clean up temp file
+        Remove-Item -Path $tempOverride -Force -ErrorAction SilentlyContinue
     }
     catch {
         Write-Warning "Could not deploy override certificate: $_"
