@@ -9,8 +9,8 @@
 .PARAMETER param1
     "stable", "beta", or specific version like "v2.2.1"
 .NOTES
-    Version: 4.0 (Final)
-    Enhanced: Cross-platform support, proper process detection, automatic restart
+    Version: 5.0 (Enhanced Detection & Interactive)
+    Enhanced: Java process detection (Liberica Platform binary support), interactive mode
 .EXAMPLE
     .\install.ps1
     .\install.ps1 stable
@@ -94,15 +94,24 @@ function Get-PrimaryIPv4 {
 
 # ============================================================
 # FUNCTION: Check if QZ Tray is running
-# Uses same logic as TaskKiller.java from QZ Tray codebase
+# Enhanced to detect both qz-tray.exe and Java processes (Liberica Platform binary support)
 # ============================================================
 function Test-QZTrayRunning {
     $os = Get-OSPlatform
     
     switch($os) {
         "Windows" {
-            # Windows: Find Java processes with qz-tray in command line
-            # Same logic as findPidsPwsh() in TaskKiller.java
+            # Windows: Check for qz-tray.exe process
+            try {
+                $qzTrayProcess = Get-Process -Name "qz-tray" -ErrorAction SilentlyContinue
+                if($qzTrayProcess) {
+                    return $true
+                }
+            } catch { }
+            
+            # Windows: Find Java processes with QZ Tray patterns in command line
+            # This catches Liberica Platform binary and other JVM implementations
+            # Patterns: qz-tray.jar, qz.App, qz.ws.PrintSocketServer
             try {
                 $javaProcesses = Get-CimInstance Win32_Process -Filter "Name = 'java.exe' OR Name = 'javaw.exe'" -ErrorAction SilentlyContinue
                 
@@ -151,7 +160,7 @@ function Test-QZTrayRunning {
 
 # ============================================================
 # FUNCTION: Stop QZ Tray
-# Uses same logic as killAll() in TaskKiller.java
+# Enhanced to stop both qz-tray.exe and Java processes (including Liberica Platform binary)
 # ============================================================
 function Stop-QZTray {
     param([int]$MaxWaitSeconds = 10)
@@ -162,7 +171,18 @@ function Stop-QZTray {
     
     switch($os) {
         "Windows" {
-            # Windows: Kill Java processes running QZ Tray
+            # Windows: Stop qz-tray.exe process first
+            try {
+                $qzTrayProcess = Get-Process -Name "qz-tray" -ErrorAction SilentlyContinue
+                if($qzTrayProcess) {
+                    Write-Host "  Terminating qz-tray.exe (PID: $($qzTrayProcess.Id))..." -ForegroundColor Gray
+                    Stop-Process -Name "qz-tray" -Force -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 1
+                }
+            } catch { }
+            
+            # Windows: Kill all Java processes running QZ Tray
+            # This stops QZ Tray running as Liberica Platform binary or other JVM
             try {
                 $javaProcesses = Get-CimInstance Win32_Process -Filter "Name = 'java.exe' OR Name = 'javaw.exe'" -ErrorAction SilentlyContinue
                 
@@ -172,7 +192,7 @@ function Stop-QZTray {
                        $proc.CommandLine -like "*qz.App*" -or 
                        $proc.CommandLine -like "*qz.ws.PrintSocketServer*") {
                         
-                        Write-Host "  Terminating QZ Tray process (PID: $($proc.ProcessId))..." -ForegroundColor Gray
+                        Write-Host "  Terminating QZ Tray Java process (PID: $($proc.ProcessId))..." -ForegroundColor Gray
                         Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
                         $killCount++
                     }
@@ -180,9 +200,9 @@ function Stop-QZTray {
                 
                 if($killCount -gt 0) {
                     Start-Sleep -Seconds 2
-                    Write-Host "  [✓] Stopped $killCount QZ Tray process(es)" -ForegroundColor Green
+                    Write-Host "  [✓] Stopped $killCount QZ Tray Java process(es)" -ForegroundColor Green
                 } else {
-                    Write-Host "  No QZ Tray process found" -ForegroundColor Gray
+                    Write-Host "  No QZ Tray Java processes found" -ForegroundColor Gray
                 }
                 
                 return $true
@@ -373,6 +393,15 @@ function Start-QZTray {
 }
 
 # ============================================================
+# FUNCTION: Pause before exit (Interactive Mode)
+# ============================================================
+function Invoke-Pause {
+    Write-Host "`n========================================" -ForegroundColor Cyan
+    Write-Host "Press any key to exit..." -ForegroundColor Yellow
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+# ============================================================
 # ARGUMENT PARSING
 # ============================================================
 
@@ -408,6 +437,7 @@ if($param1) {
             Write-Host "`n  The default behavior is to download and install the " -NoNewline
             Write-Host "stable" -ForegroundColor Green -NoNewline
             Write-Host " version`n"
+            Invoke-Pause
             exit 0
         }
         "stable" {
@@ -498,6 +528,7 @@ if("$TAG" -eq "auto") {
 
     if("$TAG" -eq "") {
         Write-Host "Unable to locate a tag for this release" -ForegroundColor Red
+        Invoke-Pause
         exit 2
     }
 
@@ -546,6 +577,7 @@ switch -Regex ($arch) {
 
 if ("$DOWNLOAD_URL" -eq "") {
     Write-Host "Unable to locate a download for this platform" -ForegroundColor Red
+    Invoke-Pause
     exit 2
 }
 
@@ -885,4 +917,5 @@ Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "Installation Complete!" -ForegroundColor Green
 Write-Host "========================================`n" -ForegroundColor Cyan
 
+Invoke-Pause
 exit 0

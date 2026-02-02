@@ -15,11 +15,11 @@ set -e
 #     ./install.sh [stable|beta|<version>|help]
 #
 # VERSION
-#     4.0 (Final)
+#     5.0 (Enhanced Detection & Interactive)
 #
 # NOTES
-#     Enhanced: Cross-platform support, proper process detection, 
-#     automatic restart, certificate generation
+#     Enhanced: Java process detection (Liberica Platform binary support),
+#     interactive mode, cross-platform support
 # ============================================================
 
 # Console colors
@@ -174,18 +174,22 @@ get_primary_ipv4() {
 
 # ============================================================
 # FUNCTION: Check if QZ Tray is running
-# Uses same logic as TaskKiller.java from QZ Tray codebase
+# Enhanced to detect Java processes including Liberica Platform binary
+# Uses pgrep -f to search for command-line patterns:
+#   - qz-tray.jar (JAR file)
+#   - qz.App (main application class)
+#   - qz.ws.PrintSocketServer (print server class)
 # ============================================================
 test_qz_tray_running() {
     local os_platform
     os_platform="$(get_os_platform)"
     
-    # Pattern names to search for (from TaskKiller.java)
+    # Pattern names to search for (catches Java processes including Liberica)
     local patterns=("qz-tray.jar" "qz.App" "qz.ws.PrintSocketServer")
     
     case "$os_platform" in
         "macOS"|"Linux")
-            # Use pgrep like findPidsPgrep() in TaskKiller.java
+            # Use pgrep -f to find processes with QZ Tray patterns in command line
             for pattern in "${patterns[@]}"; do
                 if pgrep -f "$pattern" >/dev/null 2>&1; then
                     return 0
@@ -216,7 +220,8 @@ test_qz_tray_running() {
 
 # ============================================================
 # FUNCTION: Stop QZ Tray
-# Uses same logic as killAll() in TaskKiller.java
+# Enhanced to kill all Java processes running QZ Tray (including Liberica Platform binary)
+# Searches for processes with patterns: qz-tray.jar, qz.App, qz.ws.PrintSocketServer
 # ============================================================
 stop_qz_tray() {
     local max_wait="${1:-10}"
@@ -226,7 +231,7 @@ stop_qz_tray() {
     local os_platform
     os_platform="$(get_os_platform)"
     
-    # Pattern names to search for (from TaskKiller.java)
+    # Pattern names to search for (catches all Java processes running QZ Tray)
     local patterns=("qz-tray.jar" "qz.App" "qz.ws.PrintSocketServer")
     local kill_count=0
     
@@ -239,7 +244,7 @@ stop_qz_tray() {
             osascript -e 'quit app "QZ Tray"' 2>/dev/null || true
             sleep 2
             
-            # Force kill if needed
+            # Force kill if needed - stops all Java processes running QZ Tray
             for pattern in "${patterns[@]}"; do
                 local pids
                 pids="$(pgrep -f "$pattern" 2>/dev/null || true)"
@@ -274,7 +279,7 @@ stop_qz_tray() {
             # Linux: Stop systemd service first, then kill processes
             systemctl --user stop qz-tray 2>/dev/null || true
             
-            # Also kill via pgrep (in case not running as service)
+            # Also kill via pgrep - stops all Java processes running QZ Tray (including Liberica)
             for pattern in "${patterns[@]}"; do
                 local pids
                 pids="$(pgrep -f "$pattern" 2>/dev/null || true)"
@@ -381,6 +386,15 @@ start_qz_tray() {
 }
 
 # ============================================================
+# FUNCTION: Pause before exit (Interactive Mode)
+# ============================================================
+invoke_pause() {
+    echo -e "\n${CYAN}========================================${PLAIN}"
+    echo -e "${YELLOW}Press any key to exit...${PLAIN}"
+    read -n 1 -s -r
+}
+
+# ============================================================
 # FUNCTION: Generate SSL Certificate
 # ============================================================
 generate_certificate() {
@@ -482,6 +496,7 @@ elif which wget >/dev/null 2>&1; then
     FETCH="wget -q -O -"
 else
     print_error "Either \"curl\" or \"wget\" are required to use this script"
+    invoke_pause
     exit 2
 fi
 
@@ -504,6 +519,7 @@ if [ -n "$1" ]; then
             echo -e "    ${BLUE}version${PLAIN}    Downloads and installs the exact version specified, e.g. \"2.2.1\""
             echo -e "    ${PURPLE}help${PLAIN}       Displays this help and exits"
             echo -e "\n  The default behavior is to download and install the ${GREEN}stable${PLAIN} version\n"
+            invoke_pause
             exit 0
             ;;
         "stable")
@@ -601,6 +617,7 @@ if [ "$TAG" = "auto" ]; then
     
     if [ -z "$TAG" ]; then
         print_error "Unable to locate a tag for this release"
+        invoke_pause
         exit 2
     fi
     
@@ -660,6 +677,7 @@ esac
 
 if [ -z "$DOWNLOAD_URL" ]; then
     print_error "Unable to locate a download for this platform"
+    invoke_pause
     exit 2
 fi
 
@@ -679,6 +697,7 @@ elif which wget >/dev/null 2>&1; then
     wget -q -O "$TEMP_FILE" "$DOWNLOAD_URL"
 else
     print_error "Either \"curl\" or \"wget\" are required to use this script"
+    invoke_pause
     exit 2
 fi
 
@@ -814,4 +833,5 @@ echo -e "\n${CYAN}========================================${PLAIN}"
 echo -e "${GREEN}Installation Complete!${PLAIN}"
 echo -e "${CYAN}========================================${PLAIN}\n"
 
+invoke_pause
 exit 0
