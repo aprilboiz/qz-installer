@@ -363,8 +363,18 @@ function Start-QZTray {
                 } catch { }
                 
                 # Fallback: Launch executable directly
-                if(Test-Path "$InstallPath/qz-tray") {
-                    nohup "$InstallPath/qz-tray" >/dev/null 2>&1 &
+                $qzExe = "$InstallPath/qz-tray"
+                if(Test-Path $qzExe) {
+                    # NOTE: Run through a POSIX shell so PowerShell 5.1 parser doesn't choke on '&'
+                    if (Get-Command sh -ErrorAction SilentlyContinue) {
+                        sh -c "nohup \"$qzExe\" >/dev/null 2>&1 &"
+                    } elseif (Get-Command bash -ErrorAction SilentlyContinue) {
+                        bash -lc "nohup \"$qzExe\" >/dev/null 2>&1 &"
+                    } else {
+                        Write-Warning "No sh/bash found; cannot background-start QZ Tray"
+                        return $false
+                    }
+
                     Start-Sleep -Seconds 3
                     
                     if(Test-QZTrayRunning) {
@@ -375,7 +385,7 @@ function Start-QZTray {
                         return $false
                     }
                 } else {
-                    Write-Warning "QZ Tray executable not found: $InstallPath/qz-tray"
+                    Write-Warning "QZ Tray executable not found: $qzExe"
                     return $false
                 }
             }
